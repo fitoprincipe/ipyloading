@@ -18,7 +18,7 @@ setup(
     version=__version__,
     description='Loading widgets for the Jupyter Notebook or Labs. Main '
                 'resource: https://loading.io/css/',
-    long_description=read('README.rst'),
+    long_description=read('README.md'),
     url='',
     author='Rodrigo E. Principe',
     author_email='fitoprincipe82@gmail.com',
@@ -33,5 +33,7 @@ setup(
         'testing': [],
     },
     classifiers=['Programming Language :: Python :: 2',
-                 'Programming Language :: Python :: 2.7'],
+                 'Programming Language :: Python :: 2.7',
+                 'Programming Language :: Python :: 3',
+                 'Programming Language :: Python :: 3.5']
 )
