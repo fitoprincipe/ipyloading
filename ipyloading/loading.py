@@ -28,7 +28,7 @@ class Loading(HTML):
         }
         \"""
 
-    It has three methods that can be overwrited by the subclasses in order to
+    It has three methods that can be overwritten by the subclasses in order to
     implement custom css properties: `compute_size`, `compute_color` and
     `compute_background_color`. This methods must return a `dict` holding the
     'extra' parameters.
