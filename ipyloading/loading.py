@@ -4,7 +4,8 @@ Main resource: https://loading.io/css/ """
 
 from ipywidgets import HTML
 from string import Template
-from traitlets import Unicode, Int, observe
+from traitlets import Unicode, Int, Float, observe
+from uuid import uuid4
 
 
 class Loading(HTML):
@@ -35,34 +36,43 @@ class Loading(HTML):
 
     See 'Ring' subclass for an example.
     """
-    size = Int(20)
-    color = Unicode('black')
-    background_color = Unicode('white')
+    size = Int()
+    color = Unicode()
+    background_color = Unicode()
 
-    def __init__(self, size=20, color='black', background_color='white',
-                 css='', html='', **kwargs):
+    def __init__(self, size=20, color='black', background_color='',
+                 extra={}, css='', html='', **kwargs):
         """
 
         :param size: size of the widget
         :param color: color of the
         :param background_color:
-        :param css:
-        :param html:
+        :param css: the css code to render
+        :param html: the html code to render
         :param kwargs:
         """
 
         self.css = css
         self.html = html
+        self.uid = 'a'+str(uuid4())
+        self.extra = extra
 
         self.template = Template("""
         <head>
-          <style>${css}</style>
+          <style>
+            ${css}
+          </style>
         </head>
-        <body>${html}</body>
+        <body>
+          <div class="${css_class}">
+            ${html}
+          </div>
+        </body>
         """)
 
         self.css_params = dict(size=size, color=color,
-                               background_color=background_color,)
+                               background_color=background_color,
+                               css_class=self.uid, **self.extra)
 
         super(Loading, self).__init__(**kwargs)
         self.size = size
@@ -105,8 +115,11 @@ class Loading(HTML):
         self.render()
 
     def render(self):
+        """ Makes templates substitutions to fill css and html values """
         css = Template(self.css).safe_substitute(**self.css_params)
-        self.value = self.template.safe_substitute(css=css, html=self.html)
+        html = Template(self.html).safe_substitute(css_class=self.uid)
+        self.value = self.template.safe_substitute(
+            css=css, html=html, css_class=self.uid)
 
     def compute_size(self, size):
         return dict(size=size)
@@ -119,37 +132,38 @@ class Loading(HTML):
 
 
 class Ring(Loading):
+
     def __init__(self, border=None, **kwargs):
         css = """
-        .lds-ring {
+        .${css_class} {
           display: inline-block;
           position: relative;
           width: ${width}px;
           height: ${height}px;
         }
-        .lds-ring div {
+        .${css_class} div {
           box-sizing: border-box;
           display: block;
           position: absolute;
           width: ${inner_width}px;
           height: ${inner_height}px;
           margin: ${margin}px;
-          border: $border solid ${color};
+          border: ${border}px solid ${color};
           border-radius: 50%;
-          animation: lds-ring 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
+          animation: ${css_class} 1.2s cubic-bezier(0.5, 0, 0.5, 1) infinite;
           border-color: ${color} transparent transparent transparent;
           background-color: ${background_color};
         }
-        .lds-ring div:nth-child(1) {
+        .${css_class} div:nth-child(1) {
           animation-delay: -0.45s;
         }
-        .lds-ring div:nth-child(2) {
+        .${css_class} div:nth-child(2) {
           animation-delay: -0.3s;
         }
-        .lds-ring div:nth-child(3) {
+        .${css_class} div:nth-child(3) {
           animation-delay: -0.15s;
         }
-        @keyframes lds-ring {
+        @keyframes ${css_class} {
           0% {
             transform: rotate(0deg);
           }
@@ -158,16 +172,16 @@ class Ring(Loading):
           }
         }
         """
-        html = """
-        <div class="lds-ring">
-          <div></div>
-          <div></div>
-          <div></div>
-          <div></div>
-        </div>
+        html = """        
+        <div></div>
+        <div></div>
+        <div></div>
+        <div></div>
         """
         self.border = border
-        super(Ring, self).__init__(css=css, html=html, **kwargs)
+        self.extra = self.compute_size(self.size)
+        super(Ring, self).__init__(css=css, html=html,
+                                   extra=self.extra, **kwargs)
 
     def compute_size(self, size):
 
@@ -178,5 +192,6 @@ class Ring(Loading):
         border = self.border if self.border else int(size*0.1)
         margin = border
         extra = dict(inner_width=inner_width, inner_height=inner_height,
-                     margin=margin, border=border, width=width, height=height)
+                     margin=margin, border=border,
+                     width=width, height=height)
         return extra
