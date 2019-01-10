@@ -37,11 +37,12 @@ class Loading(HTML):
     See 'Ring' subclass for an example.
     """
     size = Int()
+    border = Float(allow_none=True)
     color = Unicode()
     background_color = Unicode()
 
     def __init__(self, size=20, color='black', background_color='',
-                 extra={}, css='', html='', **kwargs):
+                 border=None, extra={}, css='', html='', **kwargs):
         """
 
         :param size: size of the widget
@@ -70,12 +71,13 @@ class Loading(HTML):
         </body>
         """)
 
-        self.css_params = dict(size=size, color=color,
+        self.css_params = dict(size=size, color=color, border=border,
                                background_color=background_color,
                                css_class=self.uid, **self.extra)
 
         super(Loading, self).__init__(**kwargs)
         self.size = size
+        self.border = border
         self.color = color
         self.background_color = background_color
 
@@ -86,6 +88,17 @@ class Loading(HTML):
         size = change['new']
 
         params = self.compute_size(size)
+        if isinstance(params, dict):
+            for key, val in params.items():
+                self.css_params[key] = val
+
+        self.render()
+
+    @observe('border')
+    def _ob_border(self, change):
+        border = change['new']
+
+        params = self.compute_border(border)
         if isinstance(params, dict):
             for key, val in params.items():
                 self.css_params[key] = val
@@ -116,13 +129,27 @@ class Loading(HTML):
 
     def render(self):
         """ Makes templates substitutions to fill css and html values """
+        # Fill CSS params
         css = Template(self.css).safe_substitute(**self.css_params)
+
+        # Fill with unique class id
         html = Template(self.html).safe_substitute(css_class=self.uid)
+
+        # Change HTML value. HTML is observing value so it will automatically
+        # change
         self.value = self.template.safe_substitute(
             css=css, html=html, css_class=self.uid)
 
     def compute_size(self, size):
         return dict(size=size)
+
+    def compute_border(self, border):
+        if not border:
+            self.border = self.size * 0.1
+        else:
+            self.border = border
+
+        return dict(border=self.border)
 
     def compute_color(self, color):
         return dict(color=color)
@@ -133,7 +160,7 @@ class Loading(HTML):
 
 class Ring(Loading):
 
-    def __init__(self, border=None, **kwargs):
+    def __init__(self, **kwargs):
         css = """
         .${css_class} {
           display: inline-block;
@@ -178,7 +205,6 @@ class Ring(Loading):
         <div></div>
         <div></div>
         """
-        self.border = border
         self.extra = self.compute_size(self.size)
         super(Ring, self).__init__(css=css, html=html,
                                    extra=self.extra, **kwargs)
@@ -189,9 +215,7 @@ class Ring(Loading):
         height = size
         inner_width = int(size*0.8)
         inner_height = int(size*0.8)
-        border = self.border if self.border else int(size*0.1)
-        margin = border
+        margin = self.border
         extra = dict(inner_width=inner_width, inner_height=inner_height,
-                     margin=margin, border=border,
-                     width=width, height=height)
+                     margin=margin, width=width, height=height)
         return extra
