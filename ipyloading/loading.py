@@ -36,13 +36,14 @@ class Loading(HTML):
 
     See 'Ring' subclass for an example.
     """
-    size = Int()
-    border = Float(allow_none=True)
-    color = Unicode()
-    background_color = Unicode()
+
+    _border = None
+    _size = None
+    _margin = None
 
     def __init__(self, size=20, color='black', background_color='',
-                 border=None, extra={}, css='', html='', **kwargs):
+                 border=None, margin=None, extra={}, css='', html='',
+                 **kwargs):
         """
 
         :param size: size of the widget
@@ -78,53 +79,88 @@ class Loading(HTML):
         super(Loading, self).__init__(**kwargs)
         self.size = size
         self.border = border
+        self.margin = margin
         self.color = color
         self.background_color = background_color
 
         self.render()
 
-    @observe('size')
-    def _ob_size(self, change):
-        size = change['new']
+    @property
+    def size(self):
+        return self._size
 
+    @size.setter
+    def size(self, size):
+        # compute new params
         params = self.compute_size(size)
+
+        # modify css params for rendering
+        if isinstance(params, dict):
+            # iterate over the new params because there could be more than
+            # one
+            for key, val in params.items():
+                self.css_params[key] = val
+
+        # assign new param
+        self._size = params['size']
+
+        # render
+        self.render()
+
+    @property
+    def margin(self):
+        return self._margin
+
+    @margin.setter
+    def margin(self, margin):
+        params = self.compute_margin(margin)
         if isinstance(params, dict):
             for key, val in params.items():
                 self.css_params[key] = val
 
+        self._margin = params['margin']
         self.render()
 
-    @observe('border')
-    def _ob_border(self, change):
-        border = change['new']
+    @property
+    def border(self):
+        return self._border
 
+    @border.setter
+    def border(self, border):
         params = self.compute_border(border)
         if isinstance(params, dict):
             for key, val in params.items():
                 self.css_params[key] = val
 
+        self._border = params['border']
         self.render()
 
-    @observe('color')
-    def _ob_color(self, change):
-        color = change['new']
+    @property
+    def color(self):
+        return self._color
 
+    @color.setter
+    def color(self, color):
         params = self.compute_color(color)
         if isinstance(params, dict):
             for key, val in params.items():
                 self.css_params[key] = val
 
+        self._color = params['color']
         self.render()
 
-    @observe('background_color')
-    def _ob_background_color(self, change):
-        color = change['new']
+    @property
+    def background_color(self):
+        return self._background_color
 
-        params = self.compute_background_color(color)
+    @background_color.setter
+    def background_color(self, background_color):
+        params = self.compute_background_color(background_color)
         if isinstance(params, dict):
             for key, val in params.items():
                 self.css_params[key] = val
 
+        self._background_color = params['background_color']
         self.render()
 
     def render(self):
@@ -144,12 +180,10 @@ class Loading(HTML):
         return dict(size=size)
 
     def compute_border(self, border):
-        if not border:
-            self.border = self.size * 0.1
-        else:
-            self.border = border
+        return dict(border=border)
 
-        return dict(border=self.border)
+    def compute_margin(self, margin):
+        return dict(margin=margin)
 
     def compute_color(self, color):
         return dict(color=color)
@@ -205,17 +239,59 @@ class Ring(Loading):
         <div></div>
         <div></div>
         """
-        self.extra = self.compute_size(self.size)
-        super(Ring, self).__init__(css=css, html=html,
-                                   extra=self.extra, **kwargs)
+        # self.extra = self.compute_extra(self.size)
+        super(Ring, self).__init__(css=css, html=html, **kwargs)
+
+        # self.extra = self.compute_extra(self.size)
 
     def compute_size(self, size):
 
         width = size
         height = size
-        inner_width = int(size*0.8)
-        inner_height = int(size*0.8)
-        margin = self.border
+        inner_width = size * 0.8
+        inner_height = size * 0.8
         extra = dict(inner_width=inner_width, inner_height=inner_height,
-                     margin=margin, width=width, height=height)
+                     width=width, height=height, size=size)
         return extra
+
+    def compute_border(self, border):
+
+        size = float(self.css_params['inner_height'])
+
+        if not border:
+            border = size * 0.1
+        else:
+            if isinstance(border, (int, float)):
+                border = border
+            elif isinstance(border, str):
+                last = border[-1:]
+                last2 = border[-2:]
+
+                if last == '%':
+                    number = float(border[:-1])/100
+                    border = size * number
+                elif last2 == 'px':
+                    number = float(border[:-2])
+                    border = number
+
+        # trim to 50% if greater
+        if border > (size * 0.5):
+            border = size * 0.5
+
+        return dict(border=border)
+
+    def compute_margin(self, margin):
+        if not margin:
+            margin = self.size * 0.1
+        else:
+            if isinstance(margin, (int, float)):
+                margin = margin
+            elif isinstance(margin, str):
+                margin = int(margin)
+
+        if margin > (self.size * 0.1):
+            print('margin overfitted')
+            inner = float(self.css_params['inner_height'])
+            self.size = inner + 2*margin
+
+        return dict(margin=margin)
